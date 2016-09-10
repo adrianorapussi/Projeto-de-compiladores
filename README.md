@@ -10,8 +10,10 @@ A linguagem utilizada será o MiniJava (Java Simplificado).
 3. Analisador sintático
 4. Analisador semântico
 
-**OBS1:** todas as etapas devem ser entregues na data determinada. 
+**OBS1:** todas as etapas devem ser entregues na data determinada.
+
 **OBS2:** cada entrega deve ser composta por 2 arquivos: código e documentação (ou simplesmente código muito bem comentado).
+
 **OBS3:** a não entrega de uma etapa zera o projeto.
 
 ### ETAPA 1
@@ -84,21 +86,21 @@ O comando System.out.println de MiniJava só pode imprimir números.
 Um exemplo simples de MiniJava:
 
 ```java
-	class Factorial{
-	    public static void main(String[] a){
-	        System.out.println(new Fac().ComputeFac(10));
-	    }
-	}
-	class Fac {
-	    public int ComputeFac(int num){
-	        int num_aux;
-	        if (num < 1)
-	            num_aux = 1;
-	        else 
-	            num_aux = num * (this.ComputeFac(num-1));
-	        return num_aux ;
-	    }
-	}
+class Factorial{
+    public static void main(String[] a){
+        System.out.println(new Fac().ComputeFac(10));
+    }
+}
+class Fac {
+    public int ComputeFac(int num){
+        int num_aux;
+        if (num < 1)
+            num_aux = 1;
+        else
+            num_aux = num * (this.ComputeFac(num-1));
+        return num_aux ;
+    }
+}
 ```
 
 Um programa MiniJava está restrito a um único arquivo fonte, não existe o conceito de pacote. 
@@ -110,13 +112,15 @@ Existem outros programas exemplo na página de MiniJava.
 Note que MiniJava trata System.out.println como uma palavra reservada, não como uma chamada do método println. Isso facilita o restante do compilador.
 Também não há um operador de divisão.
 
-### Espaços em branco: [ \n  \t  \r  \f ]
-
+### Espaços em branco:
+```
+[ \n  \t  \r  \f ]
+```
 ### Comentários: dois tipos de comentário
 
 ```
-	// -- comentário de linha
-	/* */ -- comentário de 1 ou mais linhas
+// -- comentário de linha
+/* */ -- comentário de 1 ou mais linhas
 ```
 
 #### Identificadores: uma letra [a-zA-Z]+, seguido de zero ou mais letras [0-9a-zA-Z]*, dígitos ou _
@@ -126,60 +130,60 @@ Também não há um operador de divisão.
 #### Operadores: 
 
 ```
-	=
-	<
-	==
-	!=
-	+
-	-
-	*
-	&&
-	!
+=
+<
+==
+!=
++
+-
+*
+&&
+!
 ```
-	
+
 #### Pontuação: 
 
 ```
-	(
-	)
-	[
-	]
-	{
-	}
-	;
-	.
-	,
+(
+)
+[
+]
+{
+}
+;
+.
+,
 ```
 
 #### Palavras reservadas: 
 
 ```
-	boolean
-	class
-	extends
-	public
-	static
-	void
-	main
-	String
-	return
-	int
-	if
-	else
-	while
-	System.out.println
-	length
-	true
-	false
-	this
-	new
-	null
+boolean
+class
+extends
+public
+static
+void
+main
+String
+return
+int
+if
+else
+while
+System.out.println
+length
+true
+false
+this
+new
+null
 ```
 
 ### Sintaxe
 
 A sintaxe é dada usando EBNF. Meta-símbolos EBNF usados como tokens estão entre aspas simples.
-
+```
 PROG   -> MAIN {CLASSE}
 MAIN   -> class id '{' public static void main ( String [ ] id ) '{' CMD '}' '}'
 CLASSE -> class id [extends id] '{' {VAR} {METODO} '}'
@@ -187,46 +191,46 @@ VAR    -> TIPO id ;
 METODO -> public TIPO id '(' [PARAMS] ')' '{' {VAR} {CMD} return EXP ; '}'
 PARAMS -> TIPO id {, TIPO id}
 TIPO   -> int '[' ']'
-        | boolean
-        | int
-        | id
+| boolean
+| int
+| id
 CMD    -> '{' {CMD} '}'
-        | if '(' EXP ')' CMD
-        | if '(' EXP ')' CMD else CMD
-        | while '(' EXP ')' CMD
-        | System.out.println '(' EXP ')' ;
-        | id = EXP ;
-        | id '[' EXP ']' = EXP ;
+| if '(' EXP ')' CMD
+| if '(' EXP ')' CMD else CMD
+| while '(' EXP ')' CMD
+| System.out.println '(' EXP ')' ;
+| id = EXP ;
+| id '[' EXP ']' = EXP ;
 EXP    -> EXP && REXP
-        | REXP
+| REXP
 REXP   -> REXP < AEXP
-        | REXP == AEXP
-        | REXP != AEXP
-        | AEXP
+| REXP == AEXP
+| REXP != AEXP
+| AEXP
 AEXP   -> AEXP + MEXP
-        | AEXP - MEXP
-        | MEXP
+| AEXP - MEXP
+| MEXP
 MEXP   -> MEXP * SEXP
-        | MEXP / SEXP
-        | SEXP
+| MEXP / SEXP
+| SEXP
 SEXP   -> ! SEXP
-        | - SEXP
-        | true
-        | false
-        | num
-		| null
-        | new int '[' EXP ']'
-        | PEXP . length
-        | PEXP '[' EXP ']'
-        | PEXP
+| - SEXP
+| true
+| false
+| num
+| null
+| new int '[' EXP ']'
+| PEXP . length
+| PEXP '[' EXP ']'
+| PEXP
 PEXP   -> id
-        | this
-        | new id '(' ')'
-        | '(' EXP ')'
-        | PEXP . id
-        | PEXP . id '(' [EXPS] ')'
+| this
+| new id '(' ')'
+| '(' EXP ')'
+| PEXP . id
+| PEXP . id '(' [EXPS] ')'
 EXPS   -> EXP {, EXP}
-
+```
 ### Referências:
 
 1. http://www.cambridge.org/resources/052182060X/MCIIJ2e/grammar.htm
