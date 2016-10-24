@@ -6,40 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "analisadorSintatico.h"
 
 #define BUFFER 2048
 #define MAX 32
 char str[BUFFER];
 
 void lerArquivo();
-
-typedef enum {
-	// Variáveis
-	IDtk, 
-
-	// Palavras-Chave
-	IFtk, WHILEtk, ELSEtk, NEWtk, THIStk, SYSOUTPRINTLNtk, BOOLEANtk, CLASStk,
-	EXTENDStk, PUBLICtk, STATICtk, VOIDtk, MAINtk, RETURNtk, INTtk,
-
-	//Pontuação
-	APtk, FPtk, ACOtk, FCOtk, ACHtk, FCHtk, PONTOtk, VIRGULAtk, PONTOVIRGULAtk,
-
-	// Numeros
-	NUMERALtk, 
-
-	// Operadores
-	EQUIVALENTEtk, ANDtk, MENOStk, MAIStk, MULTtk, IGUALtk, DIFFtk, NOTtk, MENORtk, MAIORtk
-
-} TokenType;
-
-
-struct tokenTag {
-	char str[MAX];
-	TokenType tokenType;
-
-	struct tokenTag *next;
-};
-typedef struct tokenTag Token;
 
 void classificarToken(Token token);
 Token *tokens;
