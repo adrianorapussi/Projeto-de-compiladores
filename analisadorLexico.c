@@ -220,7 +220,7 @@ void geradorTokens(char *tk) {
         escreverArquivo("<ABRE_CHAVES>");
         return;
     } else if (strcmp("}", tk) == 0) {
-        escreverArquivo("<FECHA_CHOLCHETE>");
+        escreverArquivo("<FECHA_CHAVES>");
         return;
     } else if (strcmp(".", tk) == 0) {
         escreverArquivo("<PONTO>");
