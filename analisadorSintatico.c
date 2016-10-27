@@ -60,13 +60,12 @@ void lerArquivo(){
         linhaCaracter = (char) fgetc(fp);        
         if (feof(fp)) {
             break;
-        } else if (linhaCaracter == '<') { //Novo Token encontrado
-        	numTokens++;
-        	tokens = (Token *)realloc(tokens, numTokens * sizeof(Token));
+        } else if (linhaCaracter == '<') { //Novo Token encontrado        	
+        	tokens = (Token *)realloc(tokens, ++numTokens * sizeof(Token));
 		} else if (linhaCaracter == '>') { //Fim do Token atual
 			strcat(tokenAtual.str, '\0');
 			classificarToken(tokenAtual);
-		} else {
+		} else { //obtem apenas simbolos e não os caracteres < e > pois não nos interessam
 			strcat(tokenAtual.str, linhaCaracter);
 		}
 		
@@ -75,9 +74,9 @@ void lerArquivo(){
 }
 
 void classificarToken(Token token) {
-	if(token.str[0] == 'I' && token.str[1] == 'D') {
+	if(token.str[0] == 'I' && token.str[1] == 'D') { // Se as duas primeiras letras forem ID, variável
 		token.tokenType = IDtk;
-	} else if (token.str[0] == 'N' && token.str[1] == 'U' && token.str[2] == 'M') {
+	} else if (token.str[0] == 'N' && token.str[1] == 'U' && token.str[2] == 'M') { //Se as três primeiras forem NUM, numeral
 		token.tokenType = NUMERALtk;
 	} else if (strcmp(token.str, "IF") == 0) {
 		token.tokenType = IFtk;
