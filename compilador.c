@@ -41,31 +41,21 @@ char matrizIdToken[2048][30];
 char matrizValorToken[2048][30];
 int  indiceTokens=0;
 
-/*******************************************
-    Pilha de controle para posicao do vetor
-    de tokens reconhecidos
-*******************************************/
-int idxStack = 0;
+int indicePilha = 0;
 
-struct Stack {
-    int start;
-    int current;
+struct Pilha {
+    int inicio;
+    int atual;
 };
+struct Pilha pilha[128];
 
-struct Stack stack[128];
+int indicePilhaLog = 0;
 
-/*******************************************
-    Pilha para log de mensagens
-*******************************************/
-int idxStackLog = 0;
-int idxStackLogPop = 0;
-
-struct StackLog {
+struct PilhaLog {
     char mensagem[2048];
-    int current;
+    int atual;
 };
-struct StackLog stackLog[128];
-
+struct PilhaLog pilhaLog[128];
 
 /**
  * -------------------------------------------------------------------------------------------------------------------
@@ -427,7 +417,7 @@ void analisadorSintatico(void) {
     char readCharacter;
     fp = fopen(tokenFile, "r");
     while(true) {
-        readCharacter = fgetc(fp);
+        readCharacter = (char) fgetc(fp);
         if(feof(fp)){
             break;
         }
@@ -531,61 +521,55 @@ bool isAnaliseSintaticaWithoutError() {
 }
 
 void nonTerminalStart() {
-    push(stack[idxStack].current, stack[idxStack].current);
+    empilha(pilha[indicePilha].atual, pilha[indicePilha].atual);
 }
 
 void nonTerminalError() {
-    pop();
-    push(stack[idxStack].current, stack[idxStack].current);
+    desempilha();
+    empilha(pilha[indicePilha].atual, pilha[indicePilha].atual);
 }
 
 bool nonTerminalRefuse() {
-    pop();
+    desempilha();
     return false;
 }
 
 bool nonTerminalAccept() {
     int newCurrentPosition = getCurrentPosOnStack();
-    pop();
+    desempilha();
     update(newCurrentPosition);
     return true;
 }
 
 void pushLog(char *funcao, char *esperado) {
     char mensagemFinal[2048];
-
     strcpy(mensagemFinal, funcao);
-    strcat(mensagemFinal, " Esperado ");
+    strcat(mensagemFinal, " ESPERADO ");
     strcat(mensagemFinal, esperado);
-    strcat(mensagemFinal, ". Recebido ");
+    strcat(mensagemFinal, ". RECEBIDO ");
     strcat(mensagemFinal, matrizIdToken[getCurrentPosOnStack()]);
-    strcpy(stackLog[idxStackLog].mensagem, mensagemFinal);
-    stackLog[idxStackLog].current = getCurrentPosOnStack();
-
-    idxStackLog++;
+    strcpy(pilhaLog[indicePilhaLog].mensagem, mensagemFinal);
+    pilhaLog[indicePilhaLog].atual = getCurrentPosOnStack();
+    indicePilhaLog++;
 }
 
 bool popLog() {
-    if (idxStackLog == 1) {
+    if (indicePilhaLog == 1) {
         return false;
     }
     char currentTempString[30];
-    sprintf(currentTempString, "%d", stackLog[idxStackLog].current);
+    sprintf(currentTempString, "%d", pilhaLog[indicePilhaLog].atual);
 
     char mensagemFinal[2048];
-    strcpy(mensagemFinal, "Posicao ");
+    strcpy(mensagemFinal, "POSICAO ");
     strcat(mensagemFinal, currentTempString);
     strcat(mensagemFinal, ": ");
-    strcat(mensagemFinal, stackLog[idxStackLog].mensagem);
-    idxStackLog--;
+    strcat(mensagemFinal, pilhaLog[indicePilhaLog].mensagem);
+    indicePilhaLog--;
     printf("%s\n", mensagemFinal);
     return true;
 }
 
-/*******************************************
-    Pilha de controle para posicao do vetor
-    de tokens reconhecidos
-*******************************************/
 bool match(char *tk, char *word) {
     if (strcmp(tk, word) == 0) {
         return true;
@@ -594,41 +578,35 @@ bool match(char *tk, char *word) {
     }
 }
 
-
 void update(int newvalue) {
-    //printf("update - current %d\n",newvalue);
-    stack[idxStack].current = newvalue;
+    pilha[indicePilha].atual = newvalue;
 }
 
 void increment() {
-    //printf("increment - atualizando current para %d\n",stack[idxStack].current+1 );
-    stack[idxStack].current = stack[idxStack].current + 1;
+    pilha[indicePilha].atual = pilha[indicePilha].atual + 1;
 
 }
 
-void push(int vstart, int vcurrent) {
-    idxStack++;
-    printf("push \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n", vstart, vcurrent, idxStack);
-    stack[idxStack].start = vstart;
-    stack[idxStack].current = vcurrent;
-
-
+void empilha(int vstart, int vcurrent) {
+    indicePilha++;
+    printf("empilha \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n", vstart, vcurrent, indicePilha);
+    pilha[indicePilha].inicio = vstart;
+    pilha[indicePilha].atual = vcurrent;
 }
 
-void pop() {
-    //printf("pop %d \n",idxStack );
-    if (idxStack < 0) {
-        printf("[ERRO]deu ruim na pilha\n");
+void desempilha() {
+    if (indicePilha < 0) {
+        printf("ERRO AO DESEMPILHAR\n");
         exit(-1);
     }
-    idxStack--;
+    indicePilha--;
 }
 
 int getCurrentPosOnStack() {
-    return stack[idxStack].current;
+    return pilha[indicePilha].atual;
 }
 
-bool lookahead(char *word) {
+bool pegarProximo(char *word) {
     if (match(matrizIdToken[getCurrentPosOnStack()], word)) {
         printf("LIDO: %s\n", matrizIdToken[getCurrentPosOnStack()]);
         increment();
@@ -641,52 +619,51 @@ bool lookahead(char *word) {
 
 bool PARAMS() {
     nonTerminalStart();
-    if (lookahead("int") || lookahead("boolean")) {
-        if (lookahead("id")) {
+    if (pegarProximo("INT") || pegarProximo("BOOLEAN")) {
+        if (pegarProximo("ID")) {
             return nonTerminalAccept();
         } else {
-            pushLog("[PARAMS]", "id");
+            pushLog("[PARAMS]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[PARAMS]", "int ou boolean");
+        pushLog("[PARAMS]", "INT ou BOOLEAN");
         nonTerminalError();
     }
 }
 
 bool VAR() {
     nonTerminalStart();
-
-    if (lookahead("int")) {
-        if (lookahead("id")) {
-            if (lookahead("PV")) {
+    if (pegarProximo("INT")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("PONTOVIRGULA")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[VAR]", "PV");
+                pushLog("[VAR]", "PONTOVIRGULA");
                 nonTerminalError();
             }
         } else {
-            pushLog("[VAR]", "id");
+            pushLog("[VAR]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[VAR]", "int");
+        pushLog("[VAR]", "INT");
         nonTerminalError();
     }
-    if (lookahead("boolean")) {
-        if (lookahead("id")) {
-            if (lookahead("PV")) {
+    if (pegarProximo("BOOLEAN")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("PONTOVIRGULA")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[VAR]", "PV");
+                pushLog("[VAR]", "PONTOVIRGULA");
                 nonTerminalError();
             }
         } else {
-            pushLog("[VAR]", "id");
+            pushLog("[VAR]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[VAR]", "boolean");
+        pushLog("[VAR]", "BOOLEAN");
         nonTerminalError();
     }
 
@@ -696,13 +673,13 @@ bool VAR() {
 
 bool METODO() {
     nonTerminalStart();
-    if (lookahead("public")) {
-        if (lookahead("int") || lookahead("boolean")) {
-            if (lookahead("id")) {
-                if (lookahead("AP")) {
+    if (pegarProximo("PUBLIC")) {
+        if (pegarProximo("INT") || pegarProximo("BOOLEAN")) {
+            if (pegarProximo("ID")) {
+                if (pegarProximo("ABRE_PARENTESES")) {
                     if (PARAMS()) {
-                        if (lookahead("FP")) {
-                            if (lookahead("ACH")) {
+                        if (pegarProximo("FECHA_PARENTESES")) {
+                            if (pegarProximo("ABRE_CHAVES")) {
                                 METODO_VAR:
                                 if (VAR()) {
                                     goto METODO_VAR;
@@ -711,17 +688,17 @@ bool METODO() {
                                     if (CMD()) {
                                         goto METODO_RETENTA_COMANDO;
                                     } else {
-                                        if (lookahead("return")) {
+                                        if (pegarProximo("RETURN")) {
                                             if (EXP()) {
-                                                if (lookahead("PV")) {
-                                                    if (lookahead("FCH")) {
+                                                if (pegarProximo("PONTOVIRGULA")) {
+                                                    if (pegarProximo("FECHA_CHAVES")) {
                                                         return nonTerminalAccept();
                                                     } else {
-                                                        pushLog("[METODO]", "FCH");
+                                                        pushLog("[METODO]", "FECHA_CHAVES");
                                                         nonTerminalError();
                                                     }
                                                 } else {
-                                                    pushLog("[METODO]", "PV");
+                                                    pushLog("[METODO]", "PONTOVIRGULA");
                                                     nonTerminalError();
                                                 }
                                             } else {
@@ -729,17 +706,17 @@ bool METODO() {
                                                 nonTerminalError();
                                             }
                                         } else {
-                                            pushLog("[METODO]", "return");
+                                            pushLog("[METODO]", "RETURN");
                                             nonTerminalError();
                                         }
                                     }
                                 }
                             } else {
-                                pushLog("[METODO]", "FP");
+                                pushLog("[METODO]", "FECHA_PARENTESES");
                                 nonTerminalError();
                             }
                         } else {
-                            pushLog("[METODO]", "FP");
+                            pushLog("[METODO]", "FECHA_PARENTESES");
                             nonTerminalError();
                         }
                     } else {
@@ -747,49 +724,48 @@ bool METODO() {
                         nonTerminalError();
                     }
                 } else {
-                    pushLog("[METODO]", "AP");
+                    pushLog("[METODO]", "ABRE_PARENTESES");
                     nonTerminalError();
                 }
             } else {
-                pushLog("[METODO]", "id");
+                pushLog("[METODO]", "ID");
                 nonTerminalError();
             }
         } else {
-            pushLog("[METODO]", "int ou boolean");
+            pushLog("[METODO]", "INT ou BOOLEAN");
             nonTerminalError();
         }
     } else {
-        pushLog("[METODO]", "public");
+        pushLog("[METODO]", "PUBLIC");
         nonTerminalError();
     }
-    pushLog("[METODO]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[METODO]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 bool CLASSE() {
     nonTerminalStart();
-    if (lookahead("class")) {
-        if (lookahead("id")) {
-            if (lookahead("extends")) {
-                if (lookahead("id")) {
+    if (pegarProximo("CLASS")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("EXTENDS")) {
+                if (pegarProximo("ID")) {
                     goto APOS_EXTENDS;
                 } else {
-                    pushLog("[CLASSE]", "id");
+                    pushLog("[CLASSE]", "ID");
                     nonTerminalError();
                 }
             } else {
                 APOS_EXTENDS:
-                if (lookahead("ACH")) {
+                if (pegarProximo("ABRE_CHAVES")) {
                     VAR_TESTE_AGAIN:
                     if (VAR()) {
                         goto VAR_TESTE_AGAIN;
                     } else {
-                        //CASO NAO HOUVER DECLARAO DE VAR OK
                         if (METODO()) {
-                            if (lookahead("FCH")) {
+                            if (pegarProximo("FECHA_CHAVES")) {
                                 return nonTerminalAccept();
                             } else {
-                                pushLog("[CLASSE]", "FCH");
+                                pushLog("[CLASSE]", "FECHA_CHAVES");
                                 nonTerminalError();
                             }
                         } else {
@@ -798,34 +774,34 @@ bool CLASSE() {
                         }
                     }
                 } else {
-                    pushLog("[CLASSE]", "ACH");
+                    pushLog("[CLASSE]", "ABRE_CHAVES");
                     nonTerminalError();
                 }
             }
         } else {
-            pushLog("[CLASSE]", "id");
+            pushLog("[CLASSE]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[CLASSE]", "class");
+        pushLog("[CLASSE]", "CLASS");
         nonTerminalError();
     }
 
-    pushLog("[CLASSE]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[CLASSE]", "<PROBLEMA COM DERIVACAO>");
     return nonTerminalRefuse();
 }
 
 bool PEXP2() {
     nonTerminalStart();
     //PEXP . ID '(' [EXPS] ')'
-    if (lookahead("PONTO")) {
-        if (lookahead("id")) {
-            if (lookahead("AP")) {
+    if (pegarProximo("PONTO")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("ABRE_PARENTESES")) {
                 if (EXP()) {
-                    if (lookahead("FP")) {
+                    if (pegarProximo("FECHA_PARENTESES")) {
                         return nonTerminalAccept();
                     } else {
-                        pushLog("[PEXP2]", "FP");
+                        pushLog("[PEXP2]", "FECHA_PARENTESES");
                         nonTerminalError();
                     }
                 } else {
@@ -833,11 +809,11 @@ bool PEXP2() {
                     nonTerminalError();
                 }
             } else {
-                pushLog("[PEXP2]", "AP");
+                pushLog("[PEXP2]", "ABRE_PARENTESES");
                 nonTerminalError();
             }
         } else {
-            pushLog("[PEXP2]", "id");
+            pushLog("[PEXP2]", "ID");
             nonTerminalError();
         }
     } else {
@@ -845,18 +821,18 @@ bool PEXP2() {
         nonTerminalError();
     }
 
-    pushLog("[PEXP2]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[PEXP2]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 bool PEXP() {
     nonTerminalStart();
-    if (lookahead("AP")) {
+    if (pegarProximo("ABRE_PARENTESES")) {
         if (PEXP()) {
-            if (lookahead("FP")) {
+            if (pegarProximo("FECHA_PARENTESES")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[PEXP]", "<FP");
+                pushLog("[PEXP]", "<FECHA_PARENTESES");
                 nonTerminalError();
             }
         } else {
@@ -864,19 +840,18 @@ bool PEXP() {
             nonTerminalError();
         }
     } else {
-        pushLog("[PEXP]", "AP");
+        pushLog("[PEXP]", "ABRE_PARENTESES");
         nonTerminalError();
     }
 
-    if (lookahead("id")) {
+    if (pegarProximo("ID")) {
         return nonTerminalAccept();
     } else {
-        pushLog("[PEXP]", "id");
+        pushLog("[PEXP]", "ID");
         nonTerminalError();
     }
 
-    //this
-    if (lookahead("this")) {
+    if (pegarProximo("THIS")) {
         if (PEXP2()) {
             return nonTerminalAccept();
         } else {
@@ -884,14 +859,13 @@ bool PEXP() {
             nonTerminalError();
         }
     } else {
-        pushLog("[PEXP]", "this");
+        pushLog("[PEXP]", "THIS");
         nonTerminalError();
     }
-    //new id ( ) . id ( exp )
-    if (lookahead("new")) {
-        if (lookahead("id")) {
-            if (lookahead("AP")) {
-                if (lookahead("FP")) {
+    if (pegarProximo("NEW")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("ABRE_PARENTESES")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
                     if (PEXP2()) {
                         return nonTerminalAccept();
                     } else {
@@ -899,88 +873,82 @@ bool PEXP() {
                         nonTerminalError();
                     }
                 } else {
-                    pushLog("[PEXP]", "FP");
+                    pushLog("[PEXP]", "FECHA_PARENTESES");
                     nonTerminalError();
                 }
             } else {
-                pushLog("[PEXP]", "AP");
+                pushLog("[PEXP]", "ABRE_PARENTESES");
                 nonTerminalError();
             }
         } else {
-            pushLog("[PEXP]", "id");
+            pushLog("[PEXP]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[PEXP]", "new");
+        pushLog("[PEXP]", "NEW");
         nonTerminalError();
     }
 
     //new id ( )
-    if (lookahead("new")) {
-        if (lookahead("id")) {
-            if (lookahead("AP")) {
-                if (lookahead("FP")) {
+    if (pegarProximo("NEW")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("ABRE_PARENTESES")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
                     return nonTerminalAccept();
                 } else {
-                    pushLog("[PEXP]", "FP");
+                    pushLog("[PEXP]", "FECHA_PARENTESES");
                     nonTerminalError();
                 }
             } else {
-                pushLog("[PEXP]", "AP");
+                pushLog("[PEXP]", "ABRE_PARENTESES");
                 nonTerminalError();
             }
         } else {
-            pushLog("[PEXP]", "id");
+            pushLog("[PEXP]", "ID");
             nonTerminalError();
         }
     } else {
-        pushLog("[PEXP]", "new");
+        pushLog("[PEXP]", "NEW");
         nonTerminalError();
     }
-    pushLog("[PEXP]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[PEXP]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 int SEXP() {
     nonTerminalStart();
-
-    if (lookahead("true")) {
+    if (pegarProximo("TRUE")) {
         return nonTerminalAccept();
     } else {
-        pushLog("[SEXP]", "true");
+        pushLog("[SEXP]", "TRUE");
         nonTerminalError();
     }
-
-    //false
-    if (lookahead("false")) {
+    if (pegarProximo("FALSE")) {
         return nonTerminalAccept();
     } else {
-        pushLog("[SEXP]", "false");
+        pushLog("[SEXP]", "FALSE");
         nonTerminalError();
     }
-    //num
-    if (lookahead("num")) {
+    if (pegarProximo("NUM")) {
         return nonTerminalAccept();
     } else {
-        pushLog("[SEXP]", "num");
+        pushLog("[SEXP]", "NUM");
         nonTerminalError();
     }
-    //null
-    if (lookahead("null")) {
+    if (pegarProximo("NULL")) {
         return nonTerminalAccept();
     } else {
-        pushLog("[SEXP]", "null");
+        pushLog("[SEXP]", "NULL");
         nonTerminalError();
     }
-    //new int [ EXP ]
-    if (lookahead("new")) {
-        if (lookahead("int")) {
-            if (lookahead("AC")) {
+    if (pegarProximo("NEW")) {
+        if (pegarProximo("INT")) {
+            if (pegarProximo("ABRE_COLCHETES")) {
                 if (EXP()) {
-                    if (lookahead("FC")) {
+                    if (pegarProximo("FECHA_COLCHETES")) {
                         return nonTerminalAccept();
                     } else {
-                        pushLog("[SEXP]", "FC");
+                        pushLog("[SEXP]", "FECHA_COLCHETES");
                         nonTerminalError();
                     }
                 } else {
@@ -988,30 +956,29 @@ int SEXP() {
                     nonTerminalError();
                 }
             } else {
-                pushLog("[SEXP]", "AC");
+                pushLog("[SEXP]", "ABRE_COLCHETES");
                 nonTerminalError();
             }
         } else {
-            pushLog("[SEXP]", "int");
+            pushLog("[SEXP]", "INT");
             nonTerminalError();
         }
     } else {
-        pushLog("[SEXP]", "new");
+        pushLog("[SEXP]", "NEW");
         nonTerminalError();
     }
-    pushLog("[SEXP]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[SEXP]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 bool MEXP() {
     nonTerminalStart();
-    //ID OU NUM * ID OU NUM
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("MULT")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("MULT")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[MEXP]", "[1] id ou num");
+                pushLog("[MEXP]", "[1] ID ou NUM");
                 nonTerminalError();
             }
         } else {
@@ -1019,15 +986,15 @@ bool MEXP() {
             nonTerminalError();
         }
     } else {
-        pushLog("[MEXP]", "[2] id ou num");
+        pushLog("[MEXP]", "[2] ID ou NUM");
         nonTerminalError();
     }
-    if (lookahead("id")) {
-        if (lookahead("MULT")) {
+    if (pegarProximo("ID")) {
+        if (pegarProximo("MULT")) {
             if (PEXP()) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[MEXP]", "[1] id ou num");
+                pushLog("[MEXP]", "[1] ID ou NUM");
                 nonTerminalError();
             }
         } else {
@@ -1035,104 +1002,100 @@ bool MEXP() {
             nonTerminalError();
         }
     } else {
-        pushLog("[MEXP]", "[2] id ou num");
+        pushLog("[MEXP]", "[2] ID ou NUM");
         nonTerminalError();
     }
-    pushLog("[MEXP]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[MEXP]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 bool AEXP() {
     nonTerminalStart();
-    //ID OU NUM + ID OU NUM
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("PLUS")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("MAIS")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[AEXP-1]", "[1] id ou num");
+                pushLog("[AEXP-1]", "[1] ID ou NUM");
                 nonTerminalError();
             }
         } else {
-            pushLog("[AEXP-1]", "PLUS");
+            pushLog("[AEXP-1]", "MAIS");
             nonTerminalError();
         }
     } else {
-        pushLog("[AEXP-1]", "[2] id ou num");
+        pushLog("[AEXP-1]", "[2] ID ou NUM");
         nonTerminalError();
     }
-    //ID OU NUM - ID OU NUM
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("MINUS")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("MENOS")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[AEXP-2]", "[3] id ou num");
+                pushLog("[AEXP-2]", "[3] ID ou NUM");
                 nonTerminalError();
             }
         } else {
-            pushLog("[AEXP-2]", "MINUS");
+            pushLog("[AEXP-2]", "MENOS");
             nonTerminalError();
         }
     } else {
-        pushLog("[AEXP-2]", "[4] id ou num");
+        pushLog("[AEXP-2]", "[4] ID ou NUM");
         nonTerminalError();
     }
-    pushLog("[AEXP]", "<nenhuma das derivacoes foi identificada>");
+    pushLog("[AEXP]", "<PROBLEMA COM DERIVACOES>");
     return nonTerminalRefuse();
 }
 
 bool REXP() {
     nonTerminalStart();
-    //REXP < AEXP
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("LT")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("MENOR")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[REXP-1]", "[5]id ou num");
+                pushLog("[REXP-1]", "[5] ID ou NUM");
                 nonTerminalError();
             }
         } else {
-            pushLog("[REXP-1]", "LT");
+            pushLog("[REXP-1]", "MENOR");
             nonTerminalError();
         }
     } else {
-        pushLog("[REXP-1]", "[6]id ou num");
+        pushLog("[REXP-1]", "[6] ID ou NUM");
         nonTerminalError();
     }
-    //REXP == AEXP
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("LT")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("MENOR")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[REXP-2]", "[1] id ou num");
+                pushLog("[REXP-2]", "[1] ID ou NUM");
                 nonTerminalError();
             }
         } else {
-            pushLog("[REXP-2]", "LT");
+            pushLog("[REXP-2]", "MENOR");
             nonTerminalError();
         }
     } else {
-        pushLog("[REXP-2]", "[2]id ou num");
+        pushLog("[REXP-2]", "[2] ID ou NUM");
         nonTerminalError();
     }
 
-    if (lookahead("id") || lookahead("num")) {
-        if (lookahead("DIF")) {
-            if (lookahead("id") || lookahead("num")) {
+    if (pegarProximo("ID") || pegarProximo("NUM")) {
+        if (pegarProximo("DIFF")) {
+            if (pegarProximo("ID") || pegarProximo("NUM")) {
                 return nonTerminalAccept();
             } else {
-                pushLog("[REXP-3]", "[3] id ou num");
+                pushLog("[REXP-3]", "[3] ID ou NUM");
                 nonTerminalError();
             }
         } else {
-            pushLog("[REXP-3]", "LT");
+            pushLog("[REXP-3]", "MENOR");
             nonTerminalError();
         }
     } else {
-        pushLog("[REXP-3]", "[4]id ou num");
+        pushLog("[REXP-3]", "[4] ID ou NUM");
         nonTerminalError();
     }
 
@@ -1163,9 +1126,9 @@ bool EXP() {
 
 bool CMD() {
     nonTerminalStart();
-    if (lookahead("ABRE_CHAVES")) {
+    if (pegarProximo("ABRE_CHAVES")) {
         if (CMD()) {
-            if (lookahead("FECHA_CHAVES")) {
+            if (pegarProximo("FECHA_CHAVES")) {
                 return nonTerminalAccept();
             } else {
                 pushLog("[CMD-1]", "FECHA_CHAVES");
@@ -1176,12 +1139,12 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("IF")) {
-        if (lookahead("ABRE_PARENTESES")) {
+    if (pegarProximo("IF")) {
+        if (pegarProximo("ABRE_PARENTESES")) {
             if (EXP()) {
-                if (lookahead("FECHA_PARENTESES")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
                     if (CMD()) {
-                        if (lookahead("ELSE")) {
+                        if (pegarProximo("ELSE")) {
                             if (CMD()) {
                                 return nonTerminalAccept();
                             } else {
@@ -1209,10 +1172,10 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("IF")) {
-        if (lookahead("ABRE_PARENTESES")) {
+    if (pegarProximo("IF")) {
+        if (pegarProximo("ABRE_PARENTESES")) {
             if (EXP()) {
-                if (lookahead("FECHA_PARENTESES")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
                     if (CMD()) {
                         return nonTerminalAccept();
                     } else {
@@ -1232,10 +1195,10 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("WHILE")) {
-        if (lookahead("ABRE_PARENTESES")) {
+    if (pegarProximo("WHILE")) {
+        if (pegarProximo("ABRE_PARENTESES")) {
             if (EXP()) {
-                if (lookahead("FECHA_PARENTESES")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
                     if (CMD()) {
                         return nonTerminalAccept();
                     } else {
@@ -1255,11 +1218,11 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("SYSOUTPRINTLN")) {
-        if (lookahead("ABRE_PARENTESES")) {
+    if (pegarProximo("SYSOUTPRINTLN")) {
+        if (pegarProximo("ABRE_PARENTESES")) {
             if (EXP()) {
-                if (lookahead("FECHA_PARENTESES")) {
-                    if (lookahead("PONTOVIRGULA")) {
+                if (pegarProximo("FECHA_PARENTESES")) {
+                    if (pegarProximo("PONTOVIRGULA")) {
                         return nonTerminalAccept();
                     } else {
                         pushLog("[CMD-5]", "PONTOVIRGULA");
@@ -1278,10 +1241,10 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("ID")) {
-        if (lookahead("ATRIBUTO")) {
+    if (pegarProximo("ID")) {
+        if (pegarProximo("ATRIBUTO")) {
             if (EXP()) {
-                if (lookahead("PONTOVIRGULA")) {
+                if (pegarProximo("PONTOVIRGULA")) {
                     return nonTerminalAccept();
                 } else {
                     pushLog("[CMD-6]", "PONTOVIRGULA");
@@ -1296,13 +1259,13 @@ bool CMD() {
             return nonTerminalRefuse();
         }
     }
-    if (lookahead("ID")) {
-        if (lookahead("ABRE_COLCHETE")) {
+    if (pegarProximo("ID")) {
+        if (pegarProximo("ABRE_COLCHETE")) {
             if (EXP()) {
-                if (lookahead("FECHA_COLCHETE")) {
-                    if (lookahead("ATRIBUTO")) {
+                if (pegarProximo("FECHA_COLCHETE")) {
+                    if (pegarProximo("ATRIBUTO")) {
                         if (EXP()) {
-                            if (lookahead("PONTOVIRGULA")) {
+                            if (pegarProximo("PONTOVIRGULA")) {
                                 return nonTerminalAccept();
                             } else {
                                 pushLog("[CMD-7]", "PONTOVIRGULA");
@@ -1335,23 +1298,23 @@ bool CMD() {
 
 bool MAIN() {
     nonTerminalStart();
-    if (lookahead("CLASS")) {
-        if (lookahead("ID")) {
-            if (lookahead("ABRE_CHAVE")) {
-                if (lookahead("PUBLIC")) {
-                    if (lookahead("STATIC")) {
-                        if (lookahead("VOID")) {
-                            if (lookahead("MAIN")) {
-                                if (lookahead("ABRE_PARENTESES")) {
-                                    if (lookahead("ID")) {
-                                        if (lookahead("ABRE_COLCHETE")) {
-                                            if (lookahead("FECHA_COLCHETE")) {
-                                                if (lookahead("ID")) {
-                                                    if (lookahead("FECHA_PARENTESES")) {
-                                                        if (lookahead("ABRE_CHAVES")) {
+    if (pegarProximo("CLASS")) {
+        if (pegarProximo("ID")) {
+            if (pegarProximo("ABRE_CHAVE")) {
+                if (pegarProximo("PUBLIC")) {
+                    if (pegarProximo("STATIC")) {
+                        if (pegarProximo("VOID")) {
+                            if (pegarProximo("MAIN")) {
+                                if (pegarProximo("ABRE_PARENTESES")) {
+                                    if (pegarProximo("ID")) {
+                                        if (pegarProximo("ABRE_COLCHETE")) {
+                                            if (pegarProximo("FECHA_COLCHETE")) {
+                                                if (pegarProximo("ID")) {
+                                                    if (pegarProximo("FECHA_PARENTESES")) {
+                                                        if (pegarProximo("ABRE_CHAVES")) {
                                                             if (CMD()) {
-                                                                if (lookahead("FECHA_CHAVES")) {
-                                                                    if (lookahead("FECHA_CHAVES")) {
+                                                                if (pegarProximo("FECHA_CHAVES")) {
+                                                                    if (pegarProximo("FECHA_CHAVES")) {
                                                                         return nonTerminalAccept();
                                                                     } else {
                                                                         pushLog("[MAIN]", "FECHA_CHAVES");
