@@ -19,11 +19,37 @@ void removerLinhaComentario();
 void escreverArquivo(char *tk);
 void lerArquivo(char *nomeDoArquivo);
 void geradorTokens(char *tk);
-
 void analisadorSintatico();
 void guardarReferenciaTokens(char *key, char *value);
 const char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno);
 void fazerAnaliseSintatica();
+bool isAnaliseSintaticaWithoutError();
+void nonTerminalStart();
+void nonTerminalError();
+bool nonTerminalRefuse();
+bool nonTerminalAccept();
+void pushLog(char *funcao, char *esperado);
+bool popLog();
+bool match(char *tk, char *word);
+void update(int newvalue);
+void increment();
+void empilha(int vstart, int vcurrent);
+void desempilha();
+int getCurrentPosOnStack();
+bool pegarProximo(char *word);
+bool PARAMS();
+bool VAR();
+bool METODO();
+bool CLASSE();
+bool PEXP2();
+bool PEXP();
+int SEXP();
+bool MEXP();
+bool AEXP();
+bool REXP();
+bool EXP();
+bool CMD();
+bool MAIN();
 
 /*
  * -------------------------------------------------------------------------------------------------------------------
