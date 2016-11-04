@@ -21,7 +21,7 @@ void lerArquivo(char *nomeDoArquivo);
 void geradorTokens(char *tk);
 void analisadorSintatico();
 void guardarReferenciaTokens(char *key, char *value);
-const char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno);
+char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno);
 void fazerAnaliseSintatica();
 bool isAnaliseSintaticaWithoutError();
 void nonTerminalStart();
@@ -61,8 +61,8 @@ char stringLexical[BUFFER];
 char stringSintatic[BUFFER];
 char vetorStringsIdentificadas[128][30];
 int indiceVetorStringsIdentificadas = 0;
-static const char tokenFile[] = "outTokens.txt";
-static const char programFile[] = "programFile.txt";
+static char tokenFile[] = "outTokens.txt";
+static char programFile[] = "programFile.txt";
 char matrizIdToken[2048][30];
 char matrizValorToken[2048][30];
 int  indiceTokens=0;
@@ -485,7 +485,7 @@ void guardarReferenciaTokens(char *idToken, char *valorToken) {
  * @return vetor contendo ids de tokens caso o tipoDeRetorno seja 0 ou vetor contendo o valor dos tokens caso o tipo de
  * retorno seja 1.
  */
-const char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
+char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
     char *vetorTokenIds = malloc(30);
     char *vetorTokenValues = malloc(30);
     bool antesDaVirgula = true;
@@ -510,7 +510,7 @@ const char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
     }
     if (tipoDeRetorno == 0) {
         return vetorTokenIds;
-    } else if (tipoDeRetorno == 1) {
+    } else {
         return vetorTokenValues;
     }
 }
@@ -651,10 +651,12 @@ bool PARAMS() {
         } else {
             pushLog("[PARAMS]", "ID");
             nonTerminalError();
+            return false;
         }
     } else {
         pushLog("[PARAMS]", "INT ou BOOLEAN");
         nonTerminalError();
+        return false;
     }
 }
 
@@ -1350,6 +1352,8 @@ bool MAIN() {
                                                                     pushLog("[MAIN]", "FECHA_CHAVES");
                                                                     return nonTerminalRefuse();
                                                                 }
+                                                            } else {
+                                                                return nonTerminalRefuse();
                                                             }
                                                         } else {
                                                             pushLog("[MAIN]", "ABRE_CHAVES");
@@ -1407,4 +1411,5 @@ bool MAIN() {
         pushLog("[MAIN]", "CLASS");
         return nonTerminalRefuse();
     }
+
 }

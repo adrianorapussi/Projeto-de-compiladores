@@ -1,3 +1,3 @@
 default:
-	gcc -o analisadorLexico analisadorLexico.c -Wall -Werror
+	gcc -o analisadorLexico compilador.c -Wall -Werror
 	./analisadorLexico
