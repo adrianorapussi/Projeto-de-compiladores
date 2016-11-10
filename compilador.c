@@ -431,34 +431,36 @@ void geradorTokens(char *tk) {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-//Análisador Sintático
+//Analisador Sintatico
 //_____________________________________________________________________________________________________________________
 
 /**
- * Executa o fluxo de análise sintática
+ * Executa o fluxo de analise sintatica
  */
 void analisadorSintatico(void) {
     //leitura do arquivo de tokens
     FILE *fp;
     char readCharacter;
     fp = fopen(tokenFile, "r");
+    int i = 0;
     while(true) {
         readCharacter = (char) fgetc(fp);
         if(feof(fp)){
             break;
         }
         if(readCharacter != '\n' ) {
-            stringSintatic[strlen(stringSintatic)] = readCharacter;
-            stringSintatic[strlen(stringSintatic)+1] = '\0';
+            stringSintatic[i] = readCharacter;
+            stringSintatic[i+1] = '\0';
         } else {
             strcat(stringSintatic, " ");
         }
+        i++;
     }
     fclose(fp);
-    //termino da leitura e manipulação dos tokens
+    //termino da leitura e manipulacao dos tokens
     char *vetorString;
     vetorString = strtok(stringSintatic," ");
-    while (vetorString != NULL){
+    while (vetorString != NULL) {
         guardarReferenciaTokens(separarIdOuValorDeTokens(vetorString, 0), separarIdOuValorDeTokens(vetorString, 1));
         vetorString = strtok(NULL, " ");
     }
@@ -466,7 +468,7 @@ void analisadorSintatico(void) {
 }
 
 /**
- * Função que popula as matrizes de tokens com o indice e valor correspondente de cada token
+ * Funcao que popula as matrizes de tokens com o indice e valor correspondente de cada token
  *
  * @param idToken
  * @param valorToken
@@ -478,19 +480,18 @@ void guardarReferenciaTokens(char *idToken, char *valorToken) {
 }
 
 /**
- * Função que separa tokens de seus ids ou valores dependendo do tipo de retorno pedido.
+ * Funcao que separa tokens de seus ids ou valores dependendo do tipo de retorno pedido.
  *
  * @param vetorTokens
  * @param tipoDeRetorno
- * @return vetor contendo ids de tokens caso o tipoDeRetorno seja 0 ou vetor contendo o valor dos tokens caso o tipo de
- * retorno seja 1.
+ * @return vetor contendo ids de tokens caso o tipoDeRetorno seja 0 ou vetor contendo o valor dos tokens caso o tipo de retorno seja 1.
  */
 char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
     char *vetorTokenIds = malloc(30);
     char *vetorTokenValues = malloc(30);
     bool antesDaVirgula = true;
-    int i=0;
-    for (i=0; vetorTokens[i] != '\0' ; i++) {
+    int i,j;
+    for (i=0,j=0; vetorTokens[i] != '\0' ; i++) {
         if (vetorTokens[i] == '<') {
             continue;
         } else if (vetorTokens[i] == ',') {
@@ -500,14 +501,16 @@ char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
             continue;
         } else {
             if (antesDaVirgula == true) {
-                vetorTokenIds[strlen(vetorTokenIds)] = vetorTokens[i];
-                vetorTokenIds[strlen(vetorTokenIds)+1] = '\0';
+                vetorTokenIds[j] = vetorTokens[i];
+                vetorTokenIds[j+1] = '\0';
             } else {
-                vetorTokenValues[strlen(vetorTokenValues)] = vetorTokens[i];
-                vetorTokenValues[strlen(vetorTokenValues)+1] = '\0';
+                vetorTokenValues[j] = vetorTokens[i];
+                vetorTokenValues[j+1] = '\0';
             }
+            j++;
         }
     }
+
     if (tipoDeRetorno == 0) {
         return vetorTokenIds;
     } else {
@@ -515,17 +518,23 @@ char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
     }
 }
 
+/**
+ * Inicia a analise sintatica com base na matriz de ids e valores preenchidos 
+*/
 void fazerAnaliseSintatica() {
     if (isAnaliseSintaticaWithoutError()) {
-        printf("Análise sintática concluída sem erros \n");
+        printf("Analise sintatica sem erros *_* \n");
     } else {
-        printf("Problema ao realizar análise sintática \n");
+        printf("Problema ao realizar analise sintatica T.T \n");
         while (popLog()) {
             NULL;
         }
     }
 }
 
+/**
+ * Inicia a verificacao das sequencias de tokens (id e/ou valores) de acordo com a especificacao do mini java
+*/
 bool isAnaliseSintaticaWithoutError() {
     nonTerminalStart();
 
@@ -546,20 +555,32 @@ bool isAnaliseSintaticaWithoutError() {
     }
 }
 
+/**
+ * Empilha o nao terminal que inicia a analise sintatica
+*/
 void nonTerminalStart() {
     empilha(pilha[indicePilha].atual, pilha[indicePilha].atual);
 }
 
+/**
+ * Desempilha um nao terminal e refaz a pilha
+*/
 void nonTerminalError() {
     desempilha();
     empilha(pilha[indicePilha].atual, pilha[indicePilha].atual);
 }
 
+/**
+* Desempilha e recusa a sintaxe
+*/
 bool nonTerminalRefuse() {
     desempilha();
     return false;
 }
 
+/**
+* Aceita o nao terminal
+*/
 bool nonTerminalAccept() {
     int newCurrentPosition = getCurrentPosOnStack();
     desempilha();
@@ -567,6 +588,9 @@ bool nonTerminalAccept() {
     return true;
 }
 
+/**
+* Printa no console os valores recebidos e esperados para os tokens de acordo com a especificacao do mini java
+*/
 void pushLog(char *funcao, char *esperado) {
     char mensagemFinal[2048];
     strcpy(mensagemFinal, funcao);
@@ -579,6 +603,9 @@ void pushLog(char *funcao, char *esperado) {
     indicePilhaLog++;
 }
 
+/**
+* TODO
+*/
 bool popLog() {
     if (indicePilhaLog == 1) {
         return false;
@@ -596,6 +623,9 @@ bool popLog() {
     return true;
 }
 
+/**
+* Fun��o para comparar o valor do TOKEN com o valor esperado retornando TRUE caso sejam iguais ou false caso contrario
+*/
 bool match(char *tk, char *word) {
     if (strcmp(tk, word) == 0) {
         return true;
@@ -604,22 +634,33 @@ bool match(char *tk, char *word) {
     }
 }
 
+/**
+ * Atualiza o valor da pilha com um novo valor
+*/
 void update(int newvalue) {
     pilha[indicePilha].atual = newvalue;
 }
 
+/**
+ * Incrementa a pilha
+*/
 void increment() {
     pilha[indicePilha].atual = pilha[indicePilha].atual + 1;
 
 }
 
+/**
+ * Empilha um valor novo na pilha
+*/
 void empilha(int vstart, int vcurrent) {
     indicePilha++;
-    printf("empilha \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n", vstart, vcurrent, indicePilha);
     pilha[indicePilha].inicio = vstart;
     pilha[indicePilha].atual = vcurrent;
 }
 
+/**
+ * Desempilha
+*/
 void desempilha() {
     if (indicePilha < 0) {
         printf("ERRO AO DESEMPILHAR\n");
@@ -628,10 +669,16 @@ void desempilha() {
     indicePilha--;
 }
 
+/**
+ * Obtem a posicao atual da pilha
+*/
 int getCurrentPosOnStack() {
     return pilha[indicePilha].atual;
 }
 
+/**
+ * Obtem o proximo valor da matriz de tokens (id ou valor)
+*/
 bool pegarProximo(char *word) {
     if (match(matrizIdToken[getCurrentPosOnStack()], word)) {
         printf("LIDO: %s\n", matrizIdToken[getCurrentPosOnStack()]);
@@ -643,6 +690,9 @@ bool pegarProximo(char *word) {
     }
 }
 
+/**
+ * Valida se a sequencia de tokens representa parametros de fun��o ou procedimento
+*/
 bool PARAMS() {
     nonTerminalStart();
     if (pegarProximo("INT") || pegarProximo("BOOLEAN")) {
@@ -660,6 +710,9 @@ bool PARAMS() {
     }
 }
 
+/**
+ * Valida se a sequencia de tokens representa declaracao de variaveis
+*/
 bool VAR() {
     nonTerminalStart();
     if (pegarProximo("INT")) {
@@ -699,6 +752,9 @@ bool VAR() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa a declaracao de um metodo
+*/
 bool METODO() {
     nonTerminalStart();
     if (pegarProximo("PUBLIC")) {
@@ -771,6 +827,9 @@ bool METODO() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa a declaracao de uma classe
+*/
 bool CLASSE() {
     nonTerminalStart();
     if (pegarProximo("CLASS")) {
@@ -819,9 +878,11 @@ bool CLASSE() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa a chamada de uma fun��o publica de uma classe
+*/
 bool PEXP2() {
     nonTerminalStart();
-    //PEXP . ID '(' [EXPS] ')'
     if (pegarProximo("PONTO")) {
         if (pegarProximo("ID")) {
             if (pegarProximo("ABRE_PARENTESES")) {
@@ -853,6 +914,9 @@ bool PEXP2() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa a chamada de uma fun��o interna
+*/
 bool PEXP() {
     nonTerminalStart();
     if (pegarProximo("ABRE_PARENTESES")) {
@@ -917,7 +981,6 @@ bool PEXP() {
         nonTerminalError();
     }
 
-    //new id ( )
     if (pegarProximo("NEW")) {
         if (pegarProximo("ID")) {
             if (pegarProximo("ABRE_PARENTESES")) {
@@ -943,6 +1006,9 @@ bool PEXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa uma atribuicao de valor a uma variavel
+*/
 int SEXP() {
     nonTerminalStart();
     if (pegarProximo("TRUE")) {
@@ -999,6 +1065,9 @@ int SEXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa uma multiplicacao
+*/
 bool MEXP() {
     nonTerminalStart();
     if (pegarProximo("ID") || pegarProximo("NUM")) {
@@ -1037,6 +1106,9 @@ bool MEXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa uma adicao de numeros
+*/
 bool AEXP() {
     nonTerminalStart();
     if (pegarProximo("ID") || pegarProximo("NUM")) {
@@ -1075,6 +1147,9 @@ bool AEXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa uma subtracao de variaveis
+*/
 bool REXP() {
     nonTerminalStart();
     if (pegarProximo("ID") || pegarProximo("NUM")) {
@@ -1131,6 +1206,9 @@ bool REXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa uma expressao de comparacao
+*/
 bool EXP() {
     nonTerminalStart();
     if (REXP()) {
@@ -1152,6 +1230,9 @@ bool EXP() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa um comando
+*/
 bool CMD() {
     nonTerminalStart();
     if (pegarProximo("ABRE_CHAVES")) {
@@ -1270,7 +1351,7 @@ bool CMD() {
         }
     }
     if (pegarProximo("ID")) {
-        if (pegarProximo("ATRIBUTO")) {
+        if (pegarProximo("IGUAL")) {
             if (EXP()) {
                 if (pegarProximo("PONTOVIRGULA")) {
                     return nonTerminalAccept();
@@ -1283,40 +1364,7 @@ bool CMD() {
                 return nonTerminalRefuse();
             }
         } else {
-            pushLog("[CMD-6]", "ATRIBUTO");
-            return nonTerminalRefuse();
-        }
-    }
-    if (pegarProximo("ID")) {
-        if (pegarProximo("ABRE_COLCHETE")) {
-            if (EXP()) {
-                if (pegarProximo("FECHA_COLCHETE")) {
-                    if (pegarProximo("ATRIBUTO")) {
-                        if (EXP()) {
-                            if (pegarProximo("PONTOVIRGULA")) {
-                                return nonTerminalAccept();
-                            } else {
-                                pushLog("[CMD-7]", "PONTOVIRGULA");
-                                return nonTerminalRefuse();
-                            }
-                        } else {
-                            pushLog("[CMD-7]", "<TENTATIVA EXP(6)>");
-                            return nonTerminalRefuse();
-                        }
-                    } else {
-                        pushLog("[CMD-6]", "ATRIBUTO");
-                        return nonTerminalRefuse();
-                    }
-                } else {
-                    pushLog("[CMD-7]", "FECHA_COLCHETE");
-                    return nonTerminalRefuse();
-                }
-            } else {
-                pushLog("[CMD-7]", "<TENTATIVA EXP(7)>");
-                return nonTerminalRefuse();
-            }
-        } else {
-            pushLog("[CMD-7]", "ABRE_COLCHETE");
+            pushLog("[CMD-6]", "IGUAL");
             return nonTerminalRefuse();
         }
     }
@@ -1324,11 +1372,14 @@ bool CMD() {
     return nonTerminalRefuse();
 }
 
+/**
+ * Valida se a sequencia de tokens representa a declaracao de uma main
+*/
 bool MAIN() {
     nonTerminalStart();
     if (pegarProximo("CLASS")) {
         if (pegarProximo("ID")) {
-            if (pegarProximo("ABRE_CHAVE")) {
+            if (pegarProximo("ABRE_CHAVES")) {
                 if (pegarProximo("PUBLIC")) {
                     if (pegarProximo("STATIC")) {
                         if (pegarProximo("VOID")) {
