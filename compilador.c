@@ -523,21 +523,23 @@ char* separarIdOuValorDeTokens(char *vetorTokens, int tipoDeRetorno) {
 */
 void fazerAnaliseSintatica() {
     if (isAnaliseSintaticaWithoutError()) {
-        printf("Analise sintatica sem erros *_* \n");
+        printf("ANALISE SINTATICA ***** OK **** \n");
     } else {
-        printf("Problema ao realizar analise sintatica T.T \n");
+        printf("PROBLEMA AO REALIZAR ANALISE SINTATICA **** ERROR **** \n");
         while (popLog()) {
             NULL;
         }
+        exit(-1);
     }
 }
+
+
 
 /**
  * Inicia a verificacao das sequencias de tokens (id e/ou valores) de acordo com a especificacao do mini java
 */
 bool isAnaliseSintaticaWithoutError() {
     nonTerminalStart();
-
     if (MAIN()) {
         if (CLASSE()) {
             return nonTerminalAccept();
@@ -546,7 +548,6 @@ bool isAnaliseSintaticaWithoutError() {
         pushLog("[PROG]", "CLASSE()");
         return nonTerminalRefuse();
     }
-
     if (MAIN()) {
         return nonTerminalAccept();
     } else {
@@ -685,7 +686,7 @@ bool pegarProximo(char *word) {
         increment();
         return true;
     } else {
-        printf("ESPERADO: %s | LIDO %s\n", word, matrizIdToken[getCurrentPosOnStack()]);
+        printf("ESPERADO: %s --------- LIDO %s\n", word, matrizIdToken[getCurrentPosOnStack()]);
         return false;
     }
 }
@@ -1073,6 +1074,10 @@ bool MEXP() {
     if (pegarProximo("ID") || pegarProximo("NUM")) {
         if (pegarProximo("MULT")) {
             if (pegarProximo("ID") || pegarProximo("NUM")) {
+            	MEXP_GOTO:
+                if (AEXP()) {
+                    goto MEXP_GOTO;
+                }
                 return nonTerminalAccept();
             } else {
                 pushLog("[MEXP]", "[1] ID ou NUM");
@@ -1114,6 +1119,10 @@ bool AEXP() {
     if (pegarProximo("ID") || pegarProximo("NUM")) {
         if (pegarProximo("MAIS")) {
             if (pegarProximo("ID") || pegarProximo("NUM")) {
+            	AEXP_GOTO:
+                if (AEXP()) {
+                    goto AEXP_GOTO;
+                }
                 return nonTerminalAccept();
             } else {
                 pushLog("[AEXP-1]", "[1] ID ou NUM");
@@ -1130,6 +1139,10 @@ bool AEXP() {
     if (pegarProximo("ID") || pegarProximo("NUM")) {
         if (pegarProximo("MENOS")) {
             if (pegarProximo("ID") || pegarProximo("NUM")) {
+            	AEXP_GOTO2:
+                if (AEXP()) {
+                    goto AEXP_GOTO2;
+                }
                 return nonTerminalAccept();
             } else {
                 pushLog("[AEXP-2]", "[3] ID ou NUM");
@@ -1141,6 +1154,17 @@ bool AEXP() {
         }
     } else {
         pushLog("[AEXP-2]", "[4] ID ou NUM");
+        nonTerminalError();
+    }
+    if (pegarProximo("MENOS") || pegarProximo("MAIS") ) {
+        if (pegarProximo("ID") || pegarProximo("NUM")) {
+            return nonTerminalAccept();
+        } else {
+            pushLog("[AEXP-3]", "MINUS");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[AEXP-3]", "[5] id ou num");
         nonTerminalError();
     }
     pushLog("[AEXP]", "<PROBLEMA COM DERIVACOES>");
@@ -1237,6 +1261,10 @@ bool CMD() {
     nonTerminalStart();
     if (pegarProximo("ABRE_CHAVES")) {
         if (CMD()) {
+        	CMD_CMD:
+        	if (CMD()) {
+                goto CMD_CMD;
+            }
             if (pegarProximo("FECHA_CHAVES")) {
                 return nonTerminalAccept();
             } else {
@@ -1404,6 +1432,7 @@ bool MAIN() {
                                                                     return nonTerminalRefuse();
                                                                 }
                                                             } else {
+                                                            	pushLog("[MAIN]", "CMD()");
                                                                 return nonTerminalRefuse();
                                                             }
                                                         } else {
