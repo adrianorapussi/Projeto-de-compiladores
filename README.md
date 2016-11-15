@@ -184,12 +184,12 @@ null
 
 A sintaxe é dada usando EBNF. Meta-símbolos EBNF usados como tokens estão entre aspas simples.
 ```
-PROG   -> MAIN {CLASSE}
-MAIN   -> class id '{' public static void main ( String [ ] id ) '{' CMD '}' '}'
-CLASSE -> class id [extends id] '{' {VAR} {METODO} '}'
+PROG   -> isMainDeClasse {isClasse}
+isMainDeClasse   -> class id '{' public static void main ( String [ ] id ) '{' CMD '}' '}'
+isClasse -> class id [extends id] '{' {VAR} {isDeclaracaoMetodo} '}'
 VAR    -> TIPO id ;
-METODO -> public TIPO id '(' [PARAMS] ')' '{' {VAR} {CMD} return EXP ; '}'
-PARAMS -> TIPO id {, TIPO id}
+isDeclaracaoMetodo -> public TIPO id '(' [isParametro] ')' '{' {VAR} {CMD} return EXP ; '}'
+isParametro -> TIPO id {, TIPO id}
 TIPO   -> int '[' ']'
 | boolean
 | int
@@ -201,34 +201,34 @@ CMD    -> '{' {CMD} '}'
 | System.out.println '(' EXP ')' ;
 | id = EXP ;
 | id '[' EXP ']' = EXP ;
-EXP    -> EXP && REXP
-| REXP
-REXP   -> REXP < AEXP
-| REXP == AEXP
-| REXP != AEXP
-| AEXP
-AEXP   -> AEXP + MEXP
-| AEXP - MEXP
-| MEXP
-MEXP   -> MEXP * SEXP
-| MEXP / SEXP
-| SEXP
-SEXP   -> ! SEXP
-| - SEXP
+EXP    -> EXP && isSubtracao
+| isSubtracao
+isSubtracao   -> isSubtracao < isAdicao
+| isSubtracao == isAdicao
+| isSubtracao != isAdicao
+| isAdicao
+isAdicao   -> isAdicao + isMultiplicacao
+| isAdicao - isMultiplicacao
+| isMultiplicacao
+isMultiplicacao   -> isMultiplicacao * isAtribuicao
+| isMultiplicacao / isAtribuicao
+| isAtribuicao
+isAtribuicao   -> ! isAtribuicao
+| - isAtribuicao
 | true
 | false
 | num
 | null
 | new int '[' EXP ']'
-| PEXP . length
-| PEXP '[' EXP ']'
-| PEXP
-PEXP   -> id
+| isInstanciaDeClasse . length
+| isInstanciaDeClasse '[' EXP ']'
+| isInstanciaDeClasse
+isInstanciaDeClasse   -> id
 | this
 | new id '(' ')'
 | '(' EXP ')'
-| PEXP . id
-| PEXP . id '(' [EXPS] ')'
+| isInstanciaDeClasse . id
+| isInstanciaDeClasse . id '(' [EXPS] ')'
 EXPS   -> EXP {, EXP}
 ```
 ### Referências:

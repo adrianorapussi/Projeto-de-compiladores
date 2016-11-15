@@ -2,11 +2,11 @@ G = (
 {PROG, MAIN, CLASSE, VAR, METODO, PARAMS, TIPO, CMD, EXP, REXP, AEXP, MEXP, SEXP, PEXP, EXPS, ID, NUM, LETRA, LETRAS, NUMEROS},
 {class, '{', '}', extends, public, ';', '(', ')', return, int, boolean, '[', ']', if, else, while, '=', System.out.println, &&, <, ==, !=, +, -, *, /, !, -, true, false, null, new, this, '.', ',', main, String, void, length,a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 {PROG   -> MAIN {CLASSE}
-MAIN   -> class ID '{' public static voID main ( String [ ] ID ) '{' CMD '}' '}'
-CLASSE -> class ID [extends ID] '{' {VAR} {METODO} '}'
+isMainDeClasse   -> class ID '{' public static voID main ( String [ ] ID ) '{' CMD '}' '}'
+isClasse -> class ID [extends ID] '{' {VAR} {METODO} '}'
 VAR    -> TIPO ID ;
-METODO -> public TIPO ID '(' [PARAMS] ')' '{' {VAR} {CMD} return EXP ; '}'
-PARAMS -> TIPO ID {, TIPO ID}
+isDeclaracaoMetodo -> public TIPO ID '(' [PARAMS] ')' '{' {VAR} {CMD} return EXP ; '}'
+isParametro -> TIPO ID {, TIPO ID}
 TIPO   -> int '[' ']'
         | boolean
         | int
@@ -22,16 +22,16 @@ EXP    -> EXP && REXP
         | REXP
 REXP   -> REXP < AEXP
         | REXP == AEXP
-        | REXP != AEXP
+        | isSubtracao != AEXP
         | AEXP
 AEXP   -> AEXP + MEXP
-        | AEXP - MEXP
+        | isAdicao - MEXP
         | MEXP
 MEXP   -> MEXP * SEXP
-        | MEXP / SEXP
+        | isMultiplicacao / SEXP
 		| SEXP
 SEXP   -> ! SEXP
-        | - SEXP
+        | - isAtribuicao
         | true
         | false
         | NUM
@@ -45,7 +45,7 @@ PEXP   -> ID
         | new ID '(' ')'
         | '(' EXP ')'
         | PEXP . ID
-        | PEXP . ID '(' [EXPS] ')'
+        | isInstanciaDeClasse . ID '(' [EXPS] ')'
 EXPS   -> EXP {, EXP}
 ID	   -> LETRAS | LETRAS NUMS | LETRAS ID | LETRAS NUMS ID | LETRAS '_' ID | LETRAS '_' NUMS ID | LETRAS NUMS '_' ID
 LETRAS -> LETRA | LETRA LETRAS
