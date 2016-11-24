@@ -87,13 +87,44 @@ bool isFuncaoOuProcedimento(void);
 
 bool isMainDeClasse(void);
 
+const char* getRecognizedTokenValueByIndex(int idx);
+
+const char* getRecognizedTokenKeyByIndex(int idx);
+
+bool isStringsEqual(const char *string1, char *string2);
+
+int addStructID(char *id);
+
+void setStructIDType(char vtype, int idx);
+
+void setStrucIDMethodInputType(char vInputType, int idx);
+
+char getStructIDType(int idx);
+
+char getStructIDMethodInputType(int idx);
+
+char *getStructIDName(int idx);
+
+int salvarTokenIdEmLexema(int idxTokenPosition);
+
+void printStructID();
+
+void pushPilhaSemantica(int indiceTokenComeco, int indiceTokenFinal);
+
+bool regraAritmetica(int primeiroToken, int ultimoToken);
+
+bool regraParametro(int primeiroToken, int ultimoToken);
+
+bool validarSemantica(int primeiroToken, int ultimoToken);
+
+void analiseSemantica(void);
 
 /*
  * -------------------------------------------------------------------------------------------------------------------
  * Constantes
  * -------------------------------------------------------------------------------------------------------------------
  */
-#define BUFFER 2048
+#define BUFFER 4196
 char stringLexical[BUFFER];
 char vetorStringsIdentificadas[128][30];
 int indiceVetorStringsIdentificadas = 0;
@@ -132,12 +163,12 @@ struct StructID {
 };
 struct StructID structID;
 
-struct StackSemantica {
+struct PilhaSemantica {
     int idxTokenStart[256];
     int idxTokenEnd[256];
     int idx;
 };
-struct StackSemantica stackSemantica;
+struct PilhaSemantica pilhaSemantica;
 
 /**
  * -------------------------------------------------------------------------------------------------------------------
@@ -261,13 +292,15 @@ void lerArquivo(char *nomeDoArquivo) {
             }
             stringLexical[strlen(stringLexical)] = linhaCaracter;
             stringLexical[strlen(stringLexical) + 1] = '\0';
-        } else if (ignorarLinha == true && linhaCaracter == '\n') {
-            //quando encontrar \n com ignorarlinha ligado concatena espaço
-            strcat(stringLexical, " ");
-            ignorarLinha = false;
-        } else if (ignorarLinha == true && linhaCaracter != '\n') {
-            //Caracteres que devem ser ignorados
-            continue;
+        } else if (ignorarLinha == true) {
+            if (linhaCaracter == '\n') {
+                //quando encontrar \n com ignorarlinha ligado concatena espaço
+                strcat(stringLexical, " ");
+                ignorarLinha = false;
+            } else {
+                //Caracteres que devem ser ignorados
+                continue;
+            }
         } else {
             strcat(stringLexical, " ");
         }
@@ -281,7 +314,7 @@ void lerArquivo(char *nomeDoArquivo) {
  * -------------------------------------------------------------------------------------------------------------------
  */
 void geradorTokens(char *tk) {
-    printf("%s \n",tk);
+    printf("%s \n", tk);
     // PALAVRAS RESERVADAS
     if (strcmp("if", tk) == 0) {
         escreverArquivo("<IF>");
@@ -480,7 +513,7 @@ void geradorTokens(char *tk) {
         }
     }
     char n[1024];
-    int idIndex = stringsIdentificadas(variavel);
+    int idIndex =addStructID(variavel);
     char idIndexString[2];
     sprintf(idIndexString, "%d", idIndex);
     strcpy(n, "<ID,");
@@ -541,7 +574,7 @@ void lerArquivoToken(void) {
         i++;
     }
     // Apos leitura, limpa o arquivo de tokens
-    fp = fopen(TOKEN_FILE, "w+");
+    fp = fopen(tokenFile, "w+");
     fclose(fp);
 }
 
@@ -751,15 +784,19 @@ bool pegarProximo(char *word) {
     }
 }
 
+int pegarAnteior() {
+    return getCurrentPosOnStack()-1;
+}
+
 /**
  * Valida se a sequencia de tokens representa parametros de funcao ou procedimento
  */
 bool isParametro(int idxLexemaNomeMetodo) {
     nonTerminalStart();
     if (pegarProximo("INT")) {
-    	int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
         if (pegarProximo("ID")) {
-        	setStructIDType('i',idxLexema);
+            setStructIDType('i', idxLexema);
             setStrucIDMethodInputType('i', idxLexemaNomeMetodo);
             return nonTerminalAccept();
         } else {
@@ -768,20 +805,19 @@ bool isParametro(int idxLexemaNomeMetodo) {
             return false;
         }
     } else if (pegarProximo("BOOLEAN")) {
-    	int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
-        if (pegarProximo("ID") ) {
-            setStructIDType('b',idxLexema);
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
+        if (pegarProximo("ID")) {
+            setStructIDType('b', idxLexema);
             setStrucIDMethodInputType('b', idxLexemaNomeMetodo);
             return nonTerminalAccept();
         } else {
             pushLog("[isParametro]", "ID");
             nonTerminalError();
         }
-    } else {
-        pushLog("[isParametro]", "INT ou BOOLEAN");
-        nonTerminalError();
-        return false;
     }
+    pushLog("[isParametro]", "INT ou BOOLEAN");
+    nonTerminalError();
+    return false;
 }
 
 /**
@@ -790,8 +826,10 @@ bool isParametro(int idxLexemaNomeMetodo) {
 bool isVariavel(void) {
     nonTerminalStart();
     if (pegarProximo("INT")) {
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
         if (pegarProximo("ID")) {
             if (pegarProximo("PONTOVIRGULA")) {
+                setStructIDType('i',idxLexema);
                 return nonTerminalAccept();
             } else {
                 pushLog("[isVariavel]", "PONTOVIRGULA");
@@ -806,8 +844,10 @@ bool isVariavel(void) {
         nonTerminalError();
     }
     if (pegarProximo("BOOLEAN")) {
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
         if (pegarProximo("ID")) {
             if (pegarProximo("PONTOVIRGULA")) {
+                setStructIDType('b',idxLexema);
                 return nonTerminalAccept();
             } else {
                 pushLog("[isVariavel]", "PONTOVIRGULA");
@@ -832,10 +872,20 @@ bool isDeclaracaoMetodo(void) {
     nonTerminalStart();
     if (pegarProximo("PUBLIC")) {
         if (pegarProximo("INT") || pegarProximo("BOOLEAN")) {
+            char methodReturnType;
+            if(isStringsEqual(getRecognizedTokenKeyByIndex(pegarAnteior()), "int")){
+                methodReturnType='i';
+            } else {
+                methodReturnType='b';
+            }
+            int idxLexema= salvarTokenIdEmLexema(getCurrentPosOnStack());
             if (pegarProximo("ID")) {
                 if (pegarProximo("ABRE_PARENTESES")) {
-                    if (isParametro()) {
+                    int firstTokenRead = pegarAnteior();
+                    if (isParametro(idxLexema)) {
                         if (pegarProximo("FECHA_PARENTESES")) {
+                            int lastTokenRead = pegarAnteior();
+                            pushPilhaSemantica(firstTokenRead,lastTokenRead);
                             if (pegarProximo("ABRE_CHAVES")) {
                                 METODO_VAR:
                                 if (isVariavel()) {
@@ -849,6 +899,7 @@ bool isDeclaracaoMetodo(void) {
                                             if (isEquivalencia()) {
                                                 if (pegarProximo("PONTOVIRGULA")) {
                                                     if (pegarProximo("FECHA_CHAVES")) {
+                                                        setStructIDType(methodReturnType,idxLexema);
                                                         return nonTerminalAccept();
                                                     } else {
                                                         pushLog("[isDeclaracaoMetodo]", "FECHA_CHAVES");
@@ -906,6 +957,7 @@ bool isDeclaracaoMetodo(void) {
 bool isClasse(void) {
     nonTerminalStart();
     if (pegarProximo("CLASS")) {
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
         if (pegarProximo("ID")) {
             if (pegarProximo("EXTENDS")) {
                 if (pegarProximo("ID")) {
@@ -923,6 +975,7 @@ bool isClasse(void) {
                     } else {
                         if (isDeclaracaoMetodo()) {
                             if (pegarProximo("FECHA_CHAVES")) {
+                                setStructIDType('c', idxLexema);
                                 return nonTerminalAccept();
                             } else {
                                 pushLog("[isClasse]", "FECHA_CHAVES");
@@ -958,9 +1011,12 @@ bool isChamadaFuncao(void) {
     nonTerminalStart();
     if (pegarProximo("PONTO")) {
         if (pegarProximo("ID")) {
+            int firstTokenRead = pegarAnteior();
             if (pegarProximo("ABRE_PARENTESES")) {
                 if (isEquivalencia()) {
                     if (pegarProximo("FECHA_PARENTESES")) {
+                        int lastTokenRead = pegarAnteior();
+                        pushPilhaSemantica(firstTokenRead, lastTokenRead);
                         return nonTerminalAccept();
                     } else {
                         pushLog("[isChamadaFuncao]", "FECHA_PARENTESES");
@@ -1334,9 +1390,9 @@ bool isFuncaoOuProcedimento(void) {
     nonTerminalStart();
     if (pegarProximo("ABRE_CHAVES")) {
         if (isFuncaoOuProcedimento()) {
-            CMD_CMD:
+            COMANDO:
             if (isFuncaoOuProcedimento()) {
-                goto CMD_CMD;
+                goto COMANDO;
             }
             if (pegarProximo("FECHA_CHAVES")) {
                 return nonTerminalAccept();
@@ -1452,9 +1508,12 @@ bool isFuncaoOuProcedimento(void) {
         }
     }
     if (pegarProximo("ID")) {
+        int firstTokenRead = pegarAnteior();
         if (pegarProximo("IGUAL")) {
             if (isEquivalencia()) {
                 if (pegarProximo("PONTOVIRGULA")) {
+                    int lastTokenRead = pegarAnteior();
+                    pushPilhaSemantica(firstTokenRead, lastTokenRead);
                     return nonTerminalAccept();
                 } else {
                     pushLog("[isFuncaoOuProcedimento-6]", "PONTOVIRGULA");
@@ -1479,6 +1538,7 @@ bool isFuncaoOuProcedimento(void) {
 bool isMainDeClasse(void) {
     nonTerminalStart();
     if (pegarProximo("CLASS")) {
+        int idxLexema = salvarTokenIdEmLexema(getCurrentPosOnStack());
         if (pegarProximo("ID")) {
             if (pegarProximo("ABRE_CHAVES")) {
                 if (pegarProximo("PUBLIC")) {
@@ -1495,6 +1555,7 @@ bool isMainDeClasse(void) {
                                                             if (isFuncaoOuProcedimento()) {
                                                                 if (pegarProximo("FECHA_CHAVES")) {
                                                                     if (pegarProximo("FECHA_CHAVES")) {
+                                                                        setStructIDType('c', idxLexema);
                                                                         return nonTerminalAccept();
                                                                     } else {
                                                                         pushLog("[isMainDeClasse]", "FECHA_CHAVES");
@@ -1566,152 +1627,148 @@ bool isMainDeClasse(void) {
     }
 }
 
-int convertTokenPositionToLexemaID(int idxTokenPosition) {
-    char idString[30];
-    strcpy(idString,getRecognizedTokenValueByIndex(idxTokenPosition));
-    int idStringConvertedtoInt = atoi(idString);
-    return idStringConvertedtoInt;
-}
-
 //---------------------------------------------------------------------------------------------------------------------
-//Analisador Sintatico
+//Analisador Semantico
 //---------------------------------------------------------------------------------------------------------------------
 
-bool equalString(const char* string1, char* string2) {
-	if (strcmp(string1, string2)==0) {
-		return true;
-	} else {
-		return false;
-	}	
+const char* getRecognizedTokenValueByIndex(int idx){
+    return matrizValorToken[idx];
 }
 
-int addStructID( char * id ){
-	int i=0;
-	for (i=0; i< structID.idx ; i++) {
-		if (strcmp(structID.ID[i],id)==0) {
-			return i;
-		}
-	}
-	strcpy(structID.ID[structID.idx], id);
-	i = structID.idx;
-	structID.idx++;
-	return i;
+const char* getRecognizedTokenKeyByIndex(int idx){
+    return matrizIdToken[idx];
 }
 
-void setStructIDType(char vtype, int idx ) {
+bool isStringsEqual(const char *string1, char *string2) {
+    if (strcmp(string1, string2) == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int addStructID(char *id) {
+    int i = 0;
+    for (i = 0; i < structID.idx; i++) {
+        if (strcmp(structID.ID[i], id) == 0) {
+            return i;
+        }
+    }
+    strcpy(structID.ID[structID.idx], id);
+    i = structID.idx;
+    structID.idx++;
+    return i;
+}
+
+void setStructIDType(char vtype, int idx) {
     structID.type[idx] = vtype;
 }
-void setStrucIDMethodInputType (char vInputType, int idx) {
-	structID.methodInputType[idx] = vInputType;
+
+void setStrucIDMethodInputType(char vInputType, int idx) {
+    structID.methodInputType[idx] = vInputType;
 }
-char  getStructIDType(int idx ) {
+
+char getStructIDType(int idx) {
     return structID.type[idx];
 }
 
-char  getStructIDMethodInputType(int idx ) {
+char getStructIDMethodInputType(int idx) {
     return structID.methodInputType[idx];
 }
 
-char * getStructIDName(int idx) {
+char *getStructIDName(int idx) {
     return structID.ID[idx];
 }
 
-int convertTokenPositionToLexemaID(int idxTokenPosition) {
+int salvarTokenIdEmLexema(int idxTokenPosition) {
     char idString[30];
-    strcpy(idString,getRecognizedTokenValueByIndex(idxTokenPosition));
+    strcpy(idString, getRecognizedTokenValueByIndex(idxTokenPosition));
     int idStringConvertedtoInt = atoi(idString);
     return idStringConvertedtoInt;
 }
 
 void printStructID() {
-	printf("Indice                      Lexema  Tipo  Metodo Entrada Tipo\n");
-	printf("_______________________________________________________________\n");
-    int i=0;
-    for (i=0; i <structID.idx; i++) {       
-        printf("%2d|%29s|%3c|%3c\n",i,getStructIDName(i), getStructIDType(i), getStructIDMethodInputType(i));
+    printf("Indice                   Lexema  Tipo  Metodo \n");
+    printf("_______________________________________________________________\n");
+    int i = 0;
+    for (i = 0; i < structID.idx; i++) {
+        printf("%2d %29s %3c %3c \n", i, getStructIDName(i), getStructIDType(i), getStructIDMethodInputType(i));
     }
     printf("\n");
 }
 
-int equalString(const char* string1, char* string2) {
-	if (strcmp(string1, string2)==0) {
-		return TRUE;
-	} else {
-		return FALSE;
-	}	
+void pushPilhaSemantica(int indiceTokenComeco, int indiceTokenFinal) {
+    pilhaSemantica.idxTokenStart[pilhaSemantica.idx] = indiceTokenComeco;
+    pilhaSemantica.idxTokenEnd[pilhaSemantica.idx] = indiceTokenFinal;
+    pilhaSemantica.idx++;
 }
 
-
-void pushStackSemantica(int tokenStart, int tokenEnd ) {
-    stackSemantica.idxTokenStart[stackSemantica.idx] = tokenStart;
-    stackSemantica.idxTokenEnd[stackSemantica.idx] = tokenEnd;
-    stackSemantica.idx++;    
-}
-
-bool ruleArithimetic(int firstTokenRead, int lastTokenRead) {
-	int i;
-	char firstType = getStructIDType(convertTokenPositionToLexemaID(firstTokenRead));
-	for (i=firstTokenRead+1; i<=lastTokenRead; i++) {
-		char TOKENKEY[30];
-		strcpy(TOKENKEY,getRecognizedTokenKeyByIndex(i));
-		if (equalString(TOKENKEY, "id") ) {
-			char laterType=getStructIDType(convertTokenPositionToLexemaID(i));
-			if (firstType!=laterType ) {
-				return false;
-			}
-		} else {
-			continue;
-		}
-	}
-	return true;
+bool regraAritmetica(int primeiroToken, int ultimoToken) {
+    int i;
+    char firstType = getStructIDType(salvarTokenIdEmLexema(primeiroToken));
+    for (i = primeiroToken + 1; i <= ultimoToken; i++) {
+        char TOKENKEY[30];
+        strcpy(TOKENKEY, getRecognizedTokenKeyByIndex(i));
+        printf("==> %s  \n",TOKENKEY);
+        if (isStringsEqual(TOKENKEY, "id")) {
+            printf("LEXEMA %d\n", salvarTokenIdEmLexema(i));
+            char laterType = getStructIDType(salvarTokenIdEmLexema(i));
+            if (firstType != laterType) {
+                printf("%c | %c\n",firstType, laterType);
+                printf("%s | %s\n",getStructIDName(salvarTokenIdEmLexema(primeiroToken)), getStructIDName(salvarTokenIdEmLexema(i)));
+                printf("%d | %d\n", primeiroToken, i);
+                return false;
+            }
+        } else {
+            continue;
+        }
+    }
+    return true;
 
 }
 
-bool ruleMethodInput(int firstTokenRead, int lastTokenRead) {
-	int i;
-	char methodInputType = getStructIDMethodInputType(convertTokenPositionToLexemaID(firstTokenRead));
-	for (i=firstTokenRead+1; i<=lastTokenRead; i++) {	
-		char TOKENKEY[30];
-		strcpy(TOKENKEY,getRecognizedTokenKeyByIndex(i));
-		if (equalString(TOKENKEY, "id") ) {
-			char laterType=getStructIDType(convertTokenPositionToLexemaID(i));
-			if (methodInputType!=laterType ) {
-				return false;
-			}
-		} else {
-			continue;
-		}
-	}
-	return true;
-
+bool regraParametro(int primeiroToken, int ultimoToken) {
+    int i;
+    char methodInputType = getStructIDMethodInputType(salvarTokenIdEmLexema(primeiroToken));
+    for (i = primeiroToken + 1; i <= ultimoToken; i++) {
+        char TOKENKEY[30];
+        strcpy(TOKENKEY, getRecognizedTokenKeyByIndex(i));
+        if (isStringsEqual(TOKENKEY, "id")) {
+            char laterType = getStructIDType(salvarTokenIdEmLexema(i));
+            if (methodInputType != laterType) {
+                return false;
+            }
+        } else {
+            continue;
+        }
+    }
+    return true;
 }
 
-bool semanticValidator(int firstTokenRead, int lastTokenRead) {
-	//Arithimetic Rule
-	if (ruleArithimetic(firstTokenRead,lastTokenRead)) {
-		return true;
-	}
-	if (ruleMethodInput(firstTokenRead,lastTokenRead)) {
-		return true;
-	}
-	printf("Regras semanticas não validadas \n");
-	return false;
+bool validarSemantica(int primeiroToken, int ultimoToken) {
+    if (regraAritmetica(primeiroToken, ultimoToken)) {
+        return true;
+    }
+    if (regraParametro(primeiroToken, ultimoToken)) {
+        return true;
+    }
+    printf("Regras semanticas não validadas \n");
+    return false;
 }
 
 void analiseSemantica(void) {
-	int i;
-	int reconstructionindex;
-	char recontructedStatement[2056];
-	memset(recontructedStatement,0, 2056);
-
-	for (i=0; i < stackSemantica.idx ; i ++ ) {
-		if(!semanticValidator(stackSemantica.idxTokenStart[i],stackSemantica.idxTokenEnd[i])) {
-			printf("Reconstructed Statement:\n%s\n",recontructedStatement );
-			printf("----------- ERRO SEMANTICO \n");
-			strcat(recontructedStatement," ");
-			strcat(recontructedStatement,getRecognizedTokenKeyByIndex(i));
-			exit(-1);
-		}
-	}
-	printf("----------- Analise Semantica sem erros. \n");
+    char declaracaoRefeita[2056];
+    memset(declaracaoRefeita, 0, 2056);
+    int i;
+    for (i = 0; i < pilhaSemantica.idx; i++) {
+        if (!validarSemantica(pilhaSemantica.idxTokenStart[i], pilhaSemantica.idxTokenEnd[i])) {
+            printf("Declaraçao refeita:\n%s\n", declaracaoRefeita);
+            printf("----------- ERRO SEMANTICO \n");
+            strcat(declaracaoRefeita, " ");
+            strcat(declaracaoRefeita, getRecognizedTokenKeyByIndex(i));
+            exit(-1);
+        }
+    }
+    printStructID();
+    printf("----------- Analise Semantica sem erros. \n");
 }
